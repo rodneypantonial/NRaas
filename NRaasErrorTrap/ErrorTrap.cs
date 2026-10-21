@@ -59,6 +59,12 @@ namespace NRaas
         [Tunable, TunableComment("Whether to enable OnProcessEventCallback UI exception reporting")]
         public static bool kEnableOPECReporting = false;
     }
+
+    public class ErrorTrapTuning7
+    {
+        [Tunable, TunableComment("Milliseconds the load-up checks may run in one frame before they sleep, 0 to run them in one go")]
+        public static int kScanSleepInterval = 10;
+    }
    
     public class ErrorTrap : Common, Common.IStartupApp, Common.IPreLoad, Common.IWorldLoadFinished, Common.IWorldQuit
     {
@@ -253,6 +259,8 @@ namespace NRaas
         {
             sObjectsOfInterest.Clear();
 
+            DereferenceManager.StartScanSleep();
+
             List<ICheck> checks = DerivativeSearch.Find<ICheck>();
 
             foreach (ICheck check in checks)
@@ -270,7 +278,11 @@ namespace NRaas
 
             CheckLotObjects();
 
+            DereferenceManager.ScanSleep();
+
             Inventories.CheckInventories(LogCorrection, DebugLogCorrection, true);
+
+            DereferenceManager.ScanSleep();
 
             List<IDereferenceController> controllers = DerivativeSearch.Find<IDereferenceController>();
 
@@ -332,6 +344,8 @@ namespace NRaas
             ProcessToBeDeleted(sSilentToBeDeleted, false);
 
             ObjectLookup.Clear();
+
+            DereferenceManager.StopScanSleep();
 
             //sDelayLoading = false;
 
