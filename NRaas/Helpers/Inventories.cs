@@ -175,15 +175,31 @@ namespace NRaas.CommonSpace.Helpers
 
         public static void CheckInventories(Logger log, Logger debugLog, bool checkDestroyed)
         {
+            CheckInventories(log, debugLog, checkDestroyed, 0);
+        }
+        // yieldEvery > 0 : sleeps one tick after that many inventories, for callers running in their own task
+        public static void CheckInventories(Logger log, Logger debugLog, bool checkDestroyed, int yieldEvery)
+        {
+            int count = 0;
+
             foreach (GameObject parent in Sims3.Gameplay.Queries.GetObjects<GameObject>())
             {
                 // Skips the localized name lookup for the many objects without an inventory
                 if (parent.Inventory == null) continue;
 
+                // Objects can go away while we sleep
+                if ((yieldEvery > 0) && (parent.HasBeenDestroyed)) continue;
+
                 CheckInventory(log, debugLog, GetName(parent), parent.Inventory, checkDestroyed);
+
+                count++;
+                if ((yieldEvery > 0) && ((count % yieldEvery) == 0) && (Sims3.SimIFace.Simulator.CheckYieldingContext(false)))
+                {
+                    Sims3.SimIFace.Simulator.Sleep(0);
+                }
             }
 
-            foreach (Household house in Household.sHouseholdList)
+            foreach (Household house in new List<Household>(Household.sHouseholdList))
             {
                 if (house.SharedFamilyInventory != null)
                 {

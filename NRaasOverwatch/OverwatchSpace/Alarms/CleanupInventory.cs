@@ -54,7 +54,8 @@ namespace NRaas.OverwatchSpace.Alarms
             {
                 Overwatch.Log("Cleanup Inventory");
 
-                Inventories.CheckInventories(Overwatch.Log, Overwatch.Log, true);
+                // The nightly run sleeps every 25 inventories, so a large town does not stall a single frame
+                Inventories.CheckInventories(Overwatch.Log, Overwatch.Log, true, prompt ? 0 : 25);
                 /*
                 foreach (GameObject obj in Sims3.Gameplay.Queries.GetObjects<GameObject>())
                 {
