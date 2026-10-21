@@ -23,6 +23,9 @@ namespace NRaas
         [PersistableStatic]
         static PersistedSettings sSettings = null;
 
+        // Read by other mods that would otherwise spread the nightly cleanups themselves. Bump when that behaviour changes.
+        public static readonly int StaggeredCleanupVersion = 1;
+
         static AlarmTask sAlarm = null;
 
         static bool sCollectNotices = false;
@@ -114,9 +117,20 @@ namespace NRaas
 
                 List<IAlarmOption> items = DerivativeSearch.Find<IAlarmOption>();
 
-                foreach (IAlarmOption alarmed in items)
+                if (Settings.mAlarmSpacing > 0)
                 {
-                    alarmed.PerformAlarm();
+                    // Each cleanup gets its own time, so their costs do not add up in one frame
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        new AlarmTask(i * Settings.mAlarmSpacing, TimeUnit.Minutes, items[i].PerformAlarm);
+                    }
+                }
+                else
+                {
+                    foreach (IAlarmOption alarmed in items)
+                    {
+                        alarmed.PerformAlarm();
+                    }
                 }
             }
             catch (Exception e)
