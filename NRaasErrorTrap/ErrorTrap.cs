@@ -71,6 +71,9 @@ namespace NRaas
         [Tunable, TunableComment("Scripting Mod Instantiator, value does not matter, only its existence")]
         protected static bool kInstantiator = false;
 
+        // Read by other mods that would otherwise spread the load-up scan themselves. Bump when that behaviour changes.
+        public static readonly int SpreadScanVersion = 1;
+
         static bool sLoading = true;
         //static bool sDelayLoading = true;
 
