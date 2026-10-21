@@ -177,6 +177,9 @@ namespace NRaas.CommonSpace.Helpers
         {
             foreach (GameObject parent in Sims3.Gameplay.Queries.GetObjects<GameObject>())
             {
+                // Skips the localized name lookup for the many objects without an inventory
+                if (parent.Inventory == null) continue;
+
                 CheckInventory(log, debugLog, GetName(parent), parent.Inventory, checkDestroyed);
             }
 
