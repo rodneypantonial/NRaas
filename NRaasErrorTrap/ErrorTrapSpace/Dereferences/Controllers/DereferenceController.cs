@@ -87,9 +87,9 @@ namespace NRaas.ErrorTrapSpace.Dereferences.Controllers
 
                             SubPerform(obj, item.mParent, item.mField, performed, process);
 
-                            if (DereferenceManager.Logger.OnWorldQuit) return;
-
                             DereferenceManager.ScanSleep();
+
+                            if (DereferenceManager.Logger.OnWorldQuit) return;
                         }
                         catch (Exception e)
                         {

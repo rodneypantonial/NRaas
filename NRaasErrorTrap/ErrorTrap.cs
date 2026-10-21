@@ -283,7 +283,8 @@ namespace NRaas
 
             DereferenceManager.ScanSleep();
 
-            Inventories.CheckInventories(LogCorrection, DebugLogCorrection, true);
+            // The inventory check sleeps between items too, once the frame used kScanSleepInterval ms
+            if (!Loading) Inventories.CheckInventories(LogCorrection, DebugLogCorrection, true, ErrorTrapTuning7.kScanSleepInterval);
 
             DereferenceManager.ScanSleep();
 
@@ -291,6 +292,9 @@ namespace NRaas
 
             foreach (IDereferenceController controller in controllers)
             {
+                // The world was quit while we slept: skip to the end, as the dereference pass below does
+                if (Loading) break;
+
                 controller.Clear();
 
                 foreach (KeyValuePair<Type, List<ObjectLookup.Item>> list in ObjectLookup.List)
