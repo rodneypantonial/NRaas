@@ -28,6 +28,11 @@ namespace NRaas
 
         static AlarmTask sAlarm = null;
 
+        // The nightly cleanups not run yet, while they are spaced out
+        static List<IAlarmOption> sPendingAlarms = null;
+        static AlarmTask sNextAlarm = null;
+        static int sSpacing = 0;
+
         static bool sCollectNotices = false;
         static string sAlarmNotice = null;
 
@@ -84,6 +89,11 @@ namespace NRaas
             {
                 kDebugging = Settings.Logging;
 
+                // Spaced cleanups of another world do not carry over
+                sPendingAlarms = null;
+                sNextAlarm = null;
+                sAlarmNotice = null;
+
                 RestartAlarm();
 
                 Butler.kDelayBeforeArriving = 0.02f;
@@ -111,25 +121,65 @@ namespace NRaas
 
         protected static void OnTimer()
         {
+            if (sPendingAlarms != null)
+            {
+                // Last night's cleanups are still spaced out: run the rest now, in order, before tonight's
+                if (sNextAlarm != null)
+                {
+                    sNextAlarm.Dispose();
+                    sNextAlarm = null;
+                }
+
+                RunAlarms(false);
+            }
+
             try
             {
-                sCollectNotices = true;
+                sPendingAlarms = DerivativeSearch.Find<IAlarmOption>();
 
-                List<IAlarmOption> items = DerivativeSearch.Find<IAlarmOption>();
+                // The whole chain stays within 12 hours
+                sSpacing = Math.Min(Settings.mAlarmSpacing, 720 / Math.Max(1, sPendingAlarms.Count));
+            }
+            catch (Exception e)
+            {
+                Common.Exception("OnTimer", e);
+                return;
+            }
 
-                if (Settings.mAlarmSpacing > 0)
+            RunAlarms(true);
+        }
+
+        static void OnNextAlarm()
+        {
+            sNextAlarm = null;
+
+            RunAlarms(true);
+        }
+
+        // Runs the cleanups in order, as one batch like before. With spacing, each next one starts sSpacing sim-minutes after
+        // the previous one finished, so their costs do not add up in one frame. The notices still show as one message at the end.
+        static void RunAlarms(bool spaced)
+        {
+            List<IAlarmOption> items = sPendingAlarms;
+
+            try
+            {
+                while (items.Count > 0)
                 {
-                    // Each cleanup gets its own time, so their costs do not add up in one frame
-                    for (int i = 0; i < items.Count; i++)
+                    IAlarmOption alarmed = items[0];
+                    items.RemoveAt(0);
+
+                    sCollectNotices = true;
+                    alarmed.PerformAlarm();
+                    sCollectNotices = false;
+
+                    // A newer run took over while this cleanup slept
+                    if (items != sPendingAlarms) return;
+
+                    if ((spaced) && (sSpacing > 0) && (items.Count > 0))
                     {
-                        new AlarmTask(i * Settings.mAlarmSpacing, TimeUnit.Minutes, items[i].PerformAlarm);
-                    }
-                }
-                else
-                {
-                    foreach (IAlarmOption alarmed in items)
-                    {
-                        alarmed.PerformAlarm();
+                        sNextAlarm = new AlarmTask(sSpacing, TimeUnit.Minutes, OnNextAlarm);
+                        return;
                     }
                 }
             }
@@ -141,6 +191,11 @@ namespace NRaas
             {
                 sCollectNotices = false;
             }
+
+            // Not when a newer run took over: that one shows the notices
+            if (items != sPendingAlarms) return;
+
+            sPendingAlarms = null;
 
             if (!string.IsNullOrEmpty(sAlarmNotice))
             {
