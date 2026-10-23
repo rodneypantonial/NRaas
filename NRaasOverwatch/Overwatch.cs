@@ -156,8 +156,9 @@ namespace NRaas
             RunAlarms(true);
         }
 
-        // Runs the cleanups in order, as one batch like before. With spacing, each next one starts sSpacing sim-minutes after
-        // the previous one finished, so their costs do not add up in one frame. The notices still show as one message at the end.
+        // Runs the cleanups in order, as one batch like before. Without spacing, each next one runs a frame after the previous
+        // one finished; with spacing, sSpacing sim-minutes after. Either way their costs do not add up in one frame. The notices
+        // still show as one message at the end.
         static void RunAlarms(bool spaced)
         {
             List<IAlarmOption> items = sPendingAlarms;
@@ -176,11 +177,18 @@ namespace NRaas
                     // A newer run took over while this cleanup slept
                     if (items != sPendingAlarms) return;
 
-                    if ((spaced) && (sSpacing > 0) && (items.Count > 0))
+                    if (items.Count == 0) break;
+
+                    if ((spaced) && (sSpacing > 0))
                     {
                         sNextAlarm = new AlarmTask(sSpacing, TimeUnit.Minutes, OnNextAlarm);
                         return;
                     }
+
+                    // Without spacing each cleanup gets its own frame (the alarm runs in its own task, so it may sleep)
+                    Common.Sleep();
+
+                    if (items != sPendingAlarms) return;
                 }
             }
             catch (Exception e)
