@@ -24,7 +24,8 @@ namespace NRaas
         static PersistedSettings sSettings = null;
 
         // Read by other mods that would otherwise spread the nightly cleanups themselves. Bump when that behaviour changes.
-        public static readonly int StaggeredCleanupVersion = 1;
+        // 2: one cleanup per frame without spacing, Stuck Check one route check per frame
+        public static readonly int StaggeredCleanupVersion = 2;
 
         static AlarmTask sAlarm = null;
 
